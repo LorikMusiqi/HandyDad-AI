@@ -740,6 +740,206 @@ strong { color: var(--accent-hover); font-weight: 600; }
   .howto-list li { gap: 1rem; }
 }
 
+/* ─────────── History drawer ─────────── */
+
+.btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 0.4rem;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, black 60%, transparent);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 200;
+}
+.drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.history-drawer {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: min(360px, 92vw);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.28s ease;
+  z-index: 210;
+}
+.history-drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+.drawer-close {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  padding: 0.1rem 0.4rem;
+}
+.drawer-close:hover { color: var(--text); }
+
+.drawer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.drawer-clear {
+  font-size: 0.72rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.5rem 1rem;
+}
+.drawer-list::-webkit-scrollbar { width: 8px; }
+.drawer-list::-webkit-scrollbar-track { background: transparent; }
+.drawer-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.history-entry {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0.85rem;
+  margin: 0.25rem 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.history-entry:hover {
+  background: var(--surface-alt);
+  border-color: var(--border);
+}
+.history-entry-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  padding-top: 2px;
+  opacity: 0.7;
+}
+.history-entry-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.history-entry-q {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.history-entry-time {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+.history-entry-x {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  cursor: pointer;
+  user-select: none;
+}
+.history-entry:hover .history-entry-x { opacity: 0.7; }
+.history-entry-x:hover {
+  opacity: 1 !important;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.drawer-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-muted);
+}
+.drawer-empty-mark {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.5rem;
+  color: var(--border);
+  margin-bottom: 0.75rem;
+  opacity: 0.6;
+}
+.drawer-empty p {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 0.92rem;
+  margin-bottom: 0.4rem;
+}
+.drawer-empty-hint {
+  font-size: 0.82rem !important;
+  opacity: 0.7;
+}
+
+@media (max-width: 480px) {
+  .btn-badge { display: none; }
+}
+
 /* ─────────── Decorative ─────────── */
 
 /* Blueprint register marks — small "+" crosshairs in each viewport corner.
