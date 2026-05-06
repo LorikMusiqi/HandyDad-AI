@@ -50,7 +50,7 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login')
+    if (!authLoading && !user) router.push('/landing')
   }, [user, authLoading, router])
 
   if (authLoading) {
