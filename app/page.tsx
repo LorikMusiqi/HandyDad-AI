@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from './context/AuthContext'
 
 const THEMES = {
   "Workbench": {
@@ -76,6 +78,8 @@ function renderInline(text: string): React.ReactNode {
 }
 
 export default function Home() {
+  const { user, loading: authLoading, signOut } = useAuth()
+  const router = useRouter()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState('')
@@ -85,8 +89,29 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+    }
+  }, [user, authLoading, router])
+
+  useEffect(() => {
     applyTheme(THEMES[activeTheme])
   }, [activeTheme])
+
+  if (authLoading) {
+    return (
+      <div className="shell">
+        <div className="loading-state">
+          <div className="spinner" />
+          Loading...
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -148,6 +173,10 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <button className="btn-ghost" onClick={signOut}>
+          Logout
+        </button>
       </header>
 
       <div className="card">
