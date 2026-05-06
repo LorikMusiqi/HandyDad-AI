@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../context/AuthContext'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,20 +15,14 @@ export default function Login() {
   const { signIn } = useAuth()
   const router = useRouter()
 
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return re.test(email)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (!validateEmail(email)) {
+    if (!EMAIL_RE.test(email)) {
       setError('Please enter a valid email address')
       return
     }
-
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -55,12 +51,13 @@ export default function Login() {
         </div>
       </header>
 
-      <div className="card" style={{ maxWidth: '480px' }}>
+      <div className="card card-narrow">
         <div className="card-header">
-          <span className="card-header-dot" style={{ background: 'var(--danger)' }} />
-          <span className="card-header-dot" style={{ background: 'var(--accent)' }} />
-          <span className="card-header-dot" style={{ background: 'var(--success)' }} />
-          <span className="card-header-title">Sign In</span>
+          <span className="card-section">§ A / Intake</span>
+          <span className="card-rule" aria-hidden="true" />
+          <span className="card-title">Sign In</span>
+          <span className="card-rule" aria-hidden="true" />
+          <span className="card-id">№ AUTH‑01</span>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -72,26 +69,14 @@ export default function Login() {
               type="email"
               autoComplete="email"
               required
+              className="input-text"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                color: 'var(--text)',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                padding: '0.9rem 1rem',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
+              onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com"
             />
           </div>
 
-          <div className="input-section" style={{ borderBottom: 'none' }}>
+          <div className="input-section">
             <label className="input-label" htmlFor="password">Password</label>
             <input
               id="password"
@@ -99,21 +84,9 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
               required
+              className="input-text"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                color: 'var(--text)',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                padding: '0.9rem 1rem',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
+              onChange={e => setPassword(e.target.value)}
               placeholder="Enter your password"
             />
           </div>
@@ -125,15 +98,10 @@ export default function Login() {
             </div>
           )}
 
-          <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
+          <div className="form-actions">
+            <button type="submit" disabled={loading} className="btn-primary btn-block">
               {loading
-                ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Signing in...</>
+                ? <><span className="spinner spinner-sm" /> Signing in…</>
                 : 'Sign In'}
             </button>
           </div>
@@ -142,20 +110,7 @@ export default function Login() {
 
       <footer className="footer">
         <span className="footer-note">Don't have an account?</span>
-        <Link
-          href="/signup"
-          style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: '0.82rem',
-            letterSpacing: '0.07em',
-            textTransform: 'uppercase',
-            color: 'var(--accent)',
-            textDecoration: 'none',
-            transition: 'color 0.15s',
-          }}
-        >
-          Sign up →
-        </Link>
+        <Link href="/signup" className="btn-link">Sign up →</Link>
       </footer>
     </div>
   )

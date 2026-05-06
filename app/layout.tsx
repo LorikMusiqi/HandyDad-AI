@@ -1,5 +1,6 @@
 import './globals.css'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeScript } from './components/ThemeScript'
 
 export const metadata = {
   title: 'HandyDad AI',
@@ -12,8 +13,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body>
+        <div className="register-marks" aria-hidden="true">
+          <span /><span /><span /><span />
+        </div>
         <AuthProvider>
           {children}
         </AuthProvider>

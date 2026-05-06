@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Oswald:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap');
 
-:root {
+/* Themes
+   Each theme defines the same set of variables so every component
+   maps cleanly across themes. Defaults live on :root (Workbench);
+   other themes override via [data-theme="..."] on <html>.
+*/
+:root,
+[data-theme="workbench"] {
   --bg: #1a1208;
   --surface: #2a1e0e;
   --surface-alt: #3a2a14;
@@ -12,6 +18,58 @@
   --accent-text: #fffbeb;
   --text: #f5e6c8;
   --text-muted: #a07850;
+}
+
+[data-theme="garage-blue"] {
+  --bg: #0d1520;
+  --surface: #162030;
+  --surface-alt: #1e2d42;
+  --border: #2a4060;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-text: #eff6ff;
+  --text: #dbeafe;
+  --text-muted: #7090b5;
+}
+
+[data-theme="safety-orange"] {
+  --bg: #1a0e06;
+  --surface: #221408;
+  --surface-alt: #2e1c0c;
+  --border: #6b2a04;
+  --accent: #ea580c;
+  --accent-hover: #f97316;
+  --accent-text: #fff7ed;
+  --text: #fed7aa;
+  --text-muted: #a86030;
+}
+
+[data-theme="forest-green"] {
+  --bg: #0a130a;
+  --surface: #111c11;
+  --surface-alt: #182618;
+  --border: #274027;
+  --accent: #16a34a;
+  --accent-hover: #22c55e;
+  --accent-text: #f0fdf4;
+  --text: #d1fae5;
+  --text-muted: #5a9b70;
+}
+
+[data-theme="steel-gray"] {
+  --bg: #0f1117;
+  --surface: #181c27;
+  --surface-alt: #1f2437;
+  --border: #303a52;
+  --accent: #94a3b8;
+  --accent-hover: #cbd5e1;
+  --accent-text: #0f1117;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+}
+
+/* Universal status colors — same across all themes */
+:root {
   --danger: #ef4444;
   --success: #22c55e;
 }
@@ -27,6 +85,7 @@ body {
   background-image:
     repeating-linear-gradient(0deg, transparent, transparent 24px, color-mix(in srgb, var(--border) 20%, transparent) 24px, color-mix(in srgb, var(--border) 20%, transparent) 25px),
     repeating-linear-gradient(90deg, transparent, transparent 24px, color-mix(in srgb, var(--border) 15%, transparent) 24px, color-mix(in srgb, var(--border) 15%, transparent) 25px);
+  transition: background-color 0.2s ease;
 }
 
 .shell {
@@ -49,12 +108,34 @@ body {
 .logo-group { display: flex; align-items: center; gap: 1rem; }
 .logo-icon {
   width: 56px; height: 56px;
-  background: var(--accent);
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent) 100%, white 18%) 0%,
+      var(--accent) 45%,
+      color-mix(in srgb, var(--accent) 78%, black) 100%
+    );
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, black);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.75rem;
-  box-shadow: 4px 4px 0 color-mix(in srgb, var(--accent) 40%, black);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 38%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, black 30%, transparent),
+    4px 4px 0 color-mix(in srgb, var(--accent) 35%, black),
+    0 10px 24px color-mix(in srgb, var(--accent) 22%, transparent);
   flex-shrink: 0;
+  position: relative;
+}
+.logo-icon::after {
+  /* Tiny rivet in the top-left corner — a subtle stamped-plate detail */
+  content: '';
+  position: absolute;
+  top: 5px; left: 5px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, black 35%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
 }
 .logo-text h1 {
   font-family: 'Oswald', Impact, sans-serif;
@@ -101,7 +182,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  min-width: 160px;
+  min-width: 180px;
   z-index: 50;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
@@ -120,6 +201,7 @@ body {
 .theme-option.active { color: var(--accent); }
 .theme-dot {
   width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, white 15%, transparent);
 }
 
 .card {
@@ -131,28 +213,60 @@ body {
   overflow: hidden;
   box-shadow: 0 2px 0 var(--border), 0 12px 40px rgba(0,0,0,0.4);
 }
+.card-narrow { max-width: 480px; }
 
 .card-header {
-  padding: 1.25rem 1.5rem;
+  padding: 0.95rem 1.5rem;
   border-bottom: 1px solid var(--border);
-  background: var(--surface-alt);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--surface-alt) 100%, white 2%),
+      var(--surface-alt));
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.85rem;
+  min-width: 0;
 }
-.card-header-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-}
-.card-header-title {
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+
+/* Workshop-ticket header: § ID ──── TITLE ──── № SERIAL  */
+.card-section,
+.card-id {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-left: auto;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.card-id {
+  opacity: 0.7;
+}
+.card-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.card-rule {
+  flex: 1;
+  min-width: 0.75rem;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--border) 100%, var(--text-muted) 30%) 20%,
+    color-mix(in srgb, var(--border) 100%, var(--text-muted) 30%) 80%,
+    transparent
+  );
 }
 
 .input-section { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+.input-section:last-of-type { border-bottom: none; }
 .input-label {
   display: block;
   font-family: 'Oswald', sans-serif;
@@ -162,7 +276,10 @@ body {
   color: var(--text-muted);
   margin-bottom: 0.6rem;
 }
-.textarea-wrap { position: relative; }
+
+/* Shared text-entry styling — used by both inputs and textareas
+   so login/signup forms match the home page exactly. */
+.input-text,
 textarea {
   width: 100%;
   background: var(--bg);
@@ -173,20 +290,28 @@ textarea {
   font-size: 0.95rem;
   line-height: 1.6;
   padding: 0.9rem 1rem;
-  resize: vertical;
-  min-height: 120px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.input-text::placeholder,
 textarea::placeholder { color: var(--text-muted); opacity: 0.7; }
+.input-text:focus,
 textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
+
+.textarea-wrap { position: relative; }
 .kbd-hint {
   position: absolute;
   bottom: 0.6rem; right: 0.75rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.68rem;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
   pointer-events: none;
   opacity: 0.6;
@@ -198,6 +323,13 @@ textarea:focus {
   gap: 0.75rem;
   margin-top: 1rem;
 }
+.form-actions {
+  padding: 0 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .btn-primary {
   display: inline-flex; align-items: center; gap: 0.5rem;
   background: var(--accent);
@@ -221,6 +353,10 @@ textarea:focus {
 }
 .btn-primary:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
 
 .btn-ghost {
   display: inline-flex; align-items: center; gap: 0.45rem;
@@ -238,11 +374,23 @@ textarea:focus {
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
 
+.btn-link {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.btn-link:hover { color: var(--accent-hover); }
+
 .char-count {
   margin-left: auto;
   font-size: 0.72rem;
   color: var(--text-muted);
-  font-family: monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
   opacity: 0.6;
 }
 
@@ -279,6 +427,7 @@ textarea:focus {
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
+.spinner-sm { width: 14px; height: 14px; border-width: 2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .response-section { padding: 1.5rem; }
@@ -332,7 +481,7 @@ textarea:focus {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.1em 0.4em;
-  font-family: 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 0.85em;
   color: var(--accent-hover);
 }
@@ -400,9 +549,55 @@ strong { color: var(--accent-hover); font-weight: 600; }
 }
 .tip-chip:hover { border-color: var(--accent); color: var(--text); }
 
+/* Blueprint register marks — small "+" crosshairs in each viewport corner.
+   Inherits --border so they recolor with the active theme. */
+.register-marks {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+.register-marks > span {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  opacity: 0.55;
+}
+.register-marks > span::before,
+.register-marks > span::after {
+  content: '';
+  position: absolute;
+  background: var(--border);
+}
+.register-marks > span::before { left: 6.5px; top: 0; width: 1px; height: 14px; }
+.register-marks > span::after  { left: 0; top: 6.5px; width: 14px; height: 1px; }
+.register-marks > span:nth-child(1) { top: 14px;    left: 14px; }
+.register-marks > span:nth-child(2) { top: 14px;    right: 14px; }
+.register-marks > span:nth-child(3) { bottom: 14px; left: 14px; }
+.register-marks > span:nth-child(4) { bottom: 14px; right: 14px; }
+
+/* Single staggered intro on first paint — restrained, runs once */
+@keyframes ticket-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.shell > .header { animation: ticket-in 0.45s ease-out both; }
+.shell > .card   { animation: ticket-in 0.45s ease-out both; animation-delay: 80ms; }
+.shell > .footer { animation: ticket-in 0.45s ease-out both; animation-delay: 160ms; }
+@media (prefers-reduced-motion: reduce) {
+  .shell > .header,
+  .shell > .card,
+  .shell > .footer { animation: none; }
+}
+
 @media (max-width: 600px) {
   .header { flex-direction: column; align-items: flex-start; }
   .footer { flex-direction: column; align-items: flex-start; }
   .tip-chips { justify-content: flex-start; }
   .logo-text h1 { font-size: 1.6rem; }
+  /* On narrow screens hide the serial id so the title has room */
+  .card-header { gap: 0.6rem; padding: 0.85rem 1rem; }
+  .card-id { display: none; }
+  .register-marks > span:nth-child(2),
+  .register-marks > span:nth-child(4) { display: none; }
 }
