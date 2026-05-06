@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from './context/AuthContext'
 import { ThemePicker } from './components/ThemePicker'
+import { HistoryDrawer, useHistory, HistoryEntry } from './components/HistoryDrawer'
 
 const TIP_QUESTIONS = [
   'Replace a light switch',
@@ -47,6 +48,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState('')
   const [error, setError] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const { entries: history, add: addHistory, remove: removeHistory, clear: clearHistory } = useHistory()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -69,6 +72,7 @@ export default function Home() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input.trim() || loading) return
+    const askedQuestion = input.trim()
     setResponse('')
     setError('')
     setLoading(true)
@@ -76,16 +80,24 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: input }),
+        body: JSON.stringify({ question: askedQuestion }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || res.statusText)
-      setResponse(data.text ?? '')
+      const text = data.text ?? ''
+      setResponse(text)
+      if (text) addHistory({ question: askedQuestion, response: text })
     } catch (err: any) {
       setError(err.message || 'Unknown error')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSelectHistory = (entry: HistoryEntry) => {
+    setInput(entry.question)
+    setResponse(entry.response)
+    setError('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -104,10 +116,28 @@ export default function Home() {
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+            className="btn-ghost"
+            onClick={() => setHistoryOpen(true)}
+            aria-label="Open question history"
+          >
+            <span aria-hidden="true">≡</span>
+            History
+            {history.length > 0 && <span className="btn-badge">{history.length}</span>}
+          </button>
           <ThemePicker />
           <button className="btn-ghost" onClick={signOut}>Logout</button>
         </div>
       </header>
+
+      <HistoryDrawer
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        entries={history}
+        onSelect={handleSelectHistory}
+        onRemove={removeHistory}
+        onClear={clearHistory}
+      />
 
       <div className="card">
         <div className="card-header">
