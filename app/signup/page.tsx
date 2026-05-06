@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../context/AuthContext'
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Signup() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -14,11 +16,6 @@ export default function Signup() {
   const { signUp } = useAuth()
   const router = useRouter()
 
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return re.test(email)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -27,12 +24,10 @@ export default function Signup() {
       setError('Please enter your name')
       return
     }
-
-    if (!validateEmail(email)) {
+    if (!EMAIL_RE.test(email)) {
       setError('Please enter a valid email address')
       return
     }
-
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -41,7 +36,7 @@ export default function Signup() {
     setLoading(true)
     try {
       await signUp(email, password, name)
-      router.push('/') // Redirect to home after signup
+      router.push('/')
     } catch (err: any) {
       setError(err.message || 'Signup failed')
     } finally {
@@ -61,12 +56,13 @@ export default function Signup() {
         </div>
       </header>
 
-      <div className="card" style={{ maxWidth: '480px' }}>
+      <div className="card card-narrow">
         <div className="card-header">
-          <span className="card-header-dot" style={{ background: 'var(--danger)' }} />
-          <span className="card-header-dot" style={{ background: 'var(--accent)' }} />
-          <span className="card-header-dot" style={{ background: 'var(--success)' }} />
-          <span className="card-header-title">Create Account</span>
+          <span className="card-section">§ B / New Entry</span>
+          <span className="card-rule" aria-hidden="true" />
+          <span className="card-title">Create Account</span>
+          <span className="card-rule" aria-hidden="true" />
+          <span className="card-id">№ AUTH‑02</span>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -77,21 +73,9 @@ export default function Signup() {
               name="name"
               type="text"
               required
+              className="input-text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                color: 'var(--text)',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                padding: '0.9rem 1rem',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
+              onChange={e => setName(e.target.value)}
               placeholder="John Doe"
             />
           </div>
@@ -104,26 +88,14 @@ export default function Signup() {
               type="email"
               autoComplete="email"
               required
+              className="input-text"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                color: 'var(--text)',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                padding: '0.9rem 1rem',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
+              onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com"
             />
           </div>
 
-          <div className="input-section" style={{ borderBottom: 'none' }}>
+          <div className="input-section">
             <label className="input-label" htmlFor="password">Password</label>
             <input
               id="password"
@@ -131,21 +103,9 @@ export default function Signup() {
               type="password"
               autoComplete="new-password"
               required
+              className="input-text"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                color: 'var(--text)',
-                fontFamily: "'Source Serif 4', Georgia, serif",
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                padding: '0.9rem 1rem',
-                outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
+              onChange={e => setPassword(e.target.value)}
               placeholder="Min 6 characters"
             />
           </div>
@@ -157,15 +117,10 @@ export default function Signup() {
             </div>
           )}
 
-          <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
+          <div className="form-actions">
+            <button type="submit" disabled={loading} className="btn-primary btn-block">
               {loading
-                ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Creating account...</>
+                ? <><span className="spinner spinner-sm" /> Creating account…</>
                 : 'Sign Up'}
             </button>
           </div>
@@ -174,20 +129,7 @@ export default function Signup() {
 
       <footer className="footer">
         <span className="footer-note">Already have an account?</span>
-        <Link
-          href="/login"
-          style={{
-            fontFamily: "'Oswald', sans-serif",
-            fontSize: '0.82rem',
-            letterSpacing: '0.07em',
-            textTransform: 'uppercase',
-            color: 'var(--accent)',
-            textDecoration: 'none',
-            transition: 'color 0.15s',
-          }}
-        >
-          Sign in →
-        </Link>
+        <Link href="/login" className="btn-link">Sign in →</Link>
       </footer>
     </div>
   )
