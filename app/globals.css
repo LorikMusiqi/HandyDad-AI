@@ -549,6 +549,197 @@ strong { color: var(--accent-hover); font-weight: 600; }
 }
 .tip-chip:hover { border-color: var(--accent); color: var(--text); }
 
+/* ─────────── Landing page ─────────── */
+
+.hero {
+  width: 100%;
+  max-width: 780px;
+  padding: 0.75rem 0 2.5rem;
+  text-align: left;
+}
+.hero-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 1.4rem;
+}
+.hero-stamp::before {
+  content: '';
+  width: 28px;
+  height: 1px;
+  background: var(--border);
+}
+.hero-title {
+  font-family: 'Oswald', Impact, sans-serif;
+  font-size: clamp(2.4rem, 6.5vw, 4.4rem);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+  line-height: 0.95;
+  color: var(--text);
+  margin: 0 0 1.5rem;
+}
+.hero-title-accent {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: 'Source Serif 4', Georgia, serif;
+}
+.hero-tagline {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text);
+  max-width: 580px;
+  margin-bottom: 2rem;
+  opacity: 0.85;
+}
+.hero-tagline em { color: var(--accent-hover); font-style: italic; }
+.hero-cta-row {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.hero-cta-end {
+  width: 100%;
+  max-width: 780px;
+  justify-content: center;
+  margin: 2rem 0 1rem;
+}
+
+.section-divider {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.25rem 0 1.4rem;
+}
+.section-divider-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border) 25%,
+    var(--border) 75%,
+    transparent
+  );
+}
+.section-divider-text {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.feature-grid {
+  width: 100%;
+  max-width: 780px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.25rem 1.4rem;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.feature-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.feature-card-icon {
+  font-size: 1.35rem;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.95rem;
+}
+.feature-card-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.55rem;
+}
+.feature-card-body {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text);
+  opacity: 0.82;
+}
+
+.howto-list {
+  width: 100%;
+  max-width: 780px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.howto-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--border) 80%, transparent);
+}
+.howto-list li:last-child { border-bottom: none; }
+.howto-num {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  line-height: 1;
+  flex-shrink: 0;
+  width: 56px;
+  padding-top: 2px;
+}
+.howto-list h4 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+.howto-list p {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text);
+  opacity: 0.78;
+}
+
+@media (max-width: 720px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .howto-num { width: 44px; font-size: 1.4rem; }
+  .howto-list li { gap: 1rem; }
+}
+
+/* ─────────── Decorative ─────────── */
+
 /* Blueprint register marks — small "+" crosshairs in each viewport corner.
    Inherits --border so they recolor with the active theme. */
 .register-marks {
@@ -582,12 +773,14 @@ strong { color: var(--accent-hover); font-weight: 600; }
   to   { opacity: 1; transform: none; }
 }
 .shell > .header { animation: ticket-in 0.45s ease-out both; }
+.shell > .hero,
 .shell > .card   { animation: ticket-in 0.45s ease-out both; animation-delay: 80ms; }
-.shell > .footer { animation: ticket-in 0.45s ease-out both; animation-delay: 160ms; }
+.shell > .section-divider,
+.shell > .feature-grid,
+.shell > .howto-list { animation: ticket-in 0.5s ease-out both; animation-delay: 140ms; }
+.shell > .footer { animation: ticket-in 0.45s ease-out both; animation-delay: 200ms; }
 @media (prefers-reduced-motion: reduce) {
-  .shell > .header,
-  .shell > .card,
-  .shell > .footer { animation: none; }
+  .shell > * { animation: none; }
 }
 
 @media (max-width: 600px) {
