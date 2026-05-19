@@ -10,9 +10,11 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Please provide a question.' }, { status: 400 })
     }
 
-    if (!process.env.GROQ_API_KEY) {
-      return Response.json({ error: 'GROQ_API_KEY not set on server' }, { status: 500 })
-    }
+  if (!process.env.GROQ_API_KEY) {
+  return Response.json({ error: 'GROQ_API_KEY not set on server' }, { status: 500 })
+}
+
+console.log('Key starts with:', process.env.GROQ_API_KEY?.slice(0, 8))
 
     const resp = await fetch(GROQ_URL, {
       method: 'POST',
