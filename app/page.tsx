@@ -13,6 +13,8 @@ const TIP_QUESTIONS = [
   'Fix a squeaky floor',
 ]
 
+const MAX_CHARS = 1000
+
 function renderInline(text: string): React.ReactNode {
   return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>
@@ -71,11 +73,27 @@ export default function Home() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
-    if (!input.trim() || loading) return
+
+    // Edge case 1: Empty input
+    if (!input.trim()) {
+      setError('Please describe your repair or task before asking.')
+      return
+    }
+
+    // Edge case 2: Input too long
+    if (input.trim().length > MAX_CHARS) {
+      setError(`Your question is too long. Please keep it under ${MAX_CHARS} characters.`)
+      return
+    }
+
+    // Edge case 3: Double submit prevention
+    if (loading) return
+
     const askedQuestion = input.trim()
     setResponse('')
     setError('')
     setLoading(true)
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -88,7 +106,12 @@ export default function Home() {
       setResponse(text)
       if (text) addHistory({ question: askedQuestion, response: text })
     } catch (err: any) {
-      setError(err.message || 'Unknown error')
+      // Edge case 4: Network error vs API error
+      if (!navigator.onLine) {
+        setError('No internet connection. Please check your network and try again.')
+      } else {
+        setError(err.message || 'Something went wrong. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -103,6 +126,12 @@ export default function Home() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
   }
+
+  const charColor = input.length > MAX_CHARS
+    ? 'var(--danger)'
+    : input.length > 800
+    ? 'var(--accent-hover)'
+    : undefined
 
   return (
     <div className="shell">
@@ -165,7 +194,11 @@ export default function Home() {
             <span className="kbd-hint">⌘↵ to send</span>
           </div>
           <div className="actions">
-            <button className="btn-primary" onClick={() => handleSubmit()} disabled={loading || !input.trim()}>
+            <button
+              className="btn-primary"
+              onClick={() => handleSubmit()}
+              disabled={loading || !input.trim() || input.length > MAX_CHARS}
+            >
               {loading
                 ? <><span className="spinner spinner-sm" /> Working on it…</>
                 : <>🔨 Ask HandyDad</>}
@@ -173,7 +206,9 @@ export default function Home() {
             <button className="btn-ghost" onClick={() => { setInput(''); setResponse(''); setError('') }}>
               ✕ Clear
             </button>
-            <span className="char-count">{input.length} chars</span>
+            <span className="char-count" style={{ color: charColor }}>
+              {input.length}/{MAX_CHARS}
+            </span>
           </div>
         </div>
 
