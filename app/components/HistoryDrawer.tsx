@@ -1,25 +1,52 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { ChatMessage, HistoryThread } from '../lib/types'
 
-export type HistoryEntry = {
-  id: string
-  question: string
-  response: string
-  ts: number
-}
+export type { HistoryThread }
 
-const STORAGE_KEY = 'handydad-history'
+const STORAGE_KEY = 'handydad-history-v2'
+const LEGACY_STORAGE_KEY = 'handydad-history'
 const MAX_ENTRIES = 50
 
+function isValidMessage(m: any): m is ChatMessage {
+  return (
+    m &&
+    typeof m === 'object' &&
+    typeof m.id === 'string' &&
+    typeof m.content === 'string' &&
+    (m.role === 'user' || m.role === 'assistant' || m.role === 'error')
+  )
+}
+
+function isValidThread(t: any): t is HistoryThread {
+  return (
+    t &&
+    typeof t === 'object' &&
+    typeof t.id === 'string' &&
+    typeof t.ts === 'number' &&
+    Array.isArray(t.messages) &&
+    t.messages.every(isValidMessage)
+  )
+}
+
+function newId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now() + Math.random())
+}
+
 export function useHistory() {
-  const [entries, setEntries] = useState<HistoryEntry[]>([])
+  const [entries, setEntries] = useState<HistoryThread[]>([])
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setEntries(JSON.parse(raw))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) setEntries(parsed.filter(isValidThread))
+      }
     } catch {
       // ignore corrupt history
     }
@@ -30,20 +57,21 @@ export function useHistory() {
     if (!hydrated) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+      // Drop legacy v1 blob once v2 is being written
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
     } catch {
       // ignore quota errors
     }
   }, [entries, hydrated])
 
-  const add = (entry: Omit<HistoryEntry, 'id' | 'ts'>) => {
-    const newEntry: HistoryEntry = {
-      ...entry,
-      id: typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : String(Date.now() + Math.random()),
+  const add = (messages: ChatMessage[]) => {
+    if (!messages.length) return
+    const thread: HistoryThread = {
+      id: newId(),
+      messages,
       ts: Date.now(),
     }
-    setEntries(prev => [newEntry, ...prev].slice(0, MAX_ENTRIES))
+    setEntries(prev => [thread, ...prev].slice(0, MAX_ENTRIES))
   }
 
   const remove = (id: string) => {
@@ -68,17 +96,21 @@ function formatRelative(ts: number) {
   return new Date(ts).toLocaleDateString()
 }
 
+function previewText(thread: HistoryThread): string {
+  const firstUser = thread.messages.find(m => m.role === 'user')
+  return firstUser?.content ?? '(empty thread)'
+}
+
 type Props = {
   open: boolean
   onClose: () => void
-  entries: HistoryEntry[]
-  onSelect: (entry: HistoryEntry) => void
+  entries: HistoryThread[]
+  onSelect: (entry: HistoryThread) => void
   onRemove: (id: string) => void
   onClear: () => void
 }
 
 export function HistoryDrawer({ open, onClose, entries, onSelect, onRemove, onClear }: Props) {
-  // Close on Escape
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -115,7 +147,7 @@ export function HistoryDrawer({ open, onClose, entries, onSelect, onRemove, onCl
 
         <div className="drawer-meta">
           <span className="drawer-count">
-            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+            {entries.length} {entries.length === 1 ? 'thread' : 'threads'}
           </span>
           {entries.length > 0 && (
             <button className="btn-link drawer-clear" onClick={onClear}>
@@ -128,9 +160,9 @@ export function HistoryDrawer({ open, onClose, entries, onSelect, onRemove, onCl
           {entries.length === 0 ? (
             <div className="drawer-empty">
               <div className="drawer-empty-mark">∅</div>
-              <p>No questions yet.</p>
+              <p>No conversations yet.</p>
               <p className="drawer-empty-hint">
-                Anything you ask will be logged here automatically.
+                Every chat you finish will be logged here automatically.
               </p>
             </div>
           ) : (
@@ -144,8 +176,10 @@ export function HistoryDrawer({ open, onClose, entries, onSelect, onRemove, onCl
                   №{String(entries.length - idx).padStart(3, '0')}
                 </span>
                 <span className="history-entry-body">
-                  <span className="history-entry-q">{entry.question}</span>
-                  <span className="history-entry-time">{formatRelative(entry.ts)}</span>
+                  <span className="history-entry-q">{previewText(entry)}</span>
+                  <span className="history-entry-time">
+                    {entry.messages.length} msg · {formatRelative(entry.ts)}
+                  </span>
                 </span>
                 <span
                   className="history-entry-x"
