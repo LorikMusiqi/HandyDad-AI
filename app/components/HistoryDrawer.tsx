@@ -64,14 +64,13 @@ export function useHistory() {
     }
   }, [entries, hydrated])
 
-  const add = (messages: ChatMessage[]) => {
+  const upsert = (threadId: string, messages: ChatMessage[]) => {
     if (!messages.length) return
-    const thread: HistoryThread = {
-      id: newId(),
-      messages,
-      ts: Date.now(),
-    }
-    setEntries(prev => [thread, ...prev].slice(0, MAX_ENTRIES))
+    setEntries(prev => {
+      const filtered = prev.filter(t => t.id !== threadId)
+      const thread: HistoryThread = { id: threadId, messages, ts: Date.now() }
+      return [thread, ...filtered].slice(0, MAX_ENTRIES)
+    })
   }
 
   const remove = (id: string) => {
@@ -80,7 +79,7 @@ export function useHistory() {
 
   const clear = () => setEntries([])
 
-  return { entries, add, remove, clear }
+  return { entries, upsert, remove, clear, hydrated }
 }
 
 function formatRelative(ts: number) {

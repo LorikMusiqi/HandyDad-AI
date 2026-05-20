@@ -69,6 +69,7 @@ export default function Home() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [activeProject, setActiveProject] = useState<Project | null>(null)
@@ -76,7 +77,8 @@ export default function Home() {
   const [guideModal, setGuideModal] = useState<{ open: boolean; messageId: string; content: string }>(
     { open: false, messageId: '', content: '' },
   )
-  const { entries: history, add: addHistory, remove: removeHistory, clear: clearHistory } = useHistory()
+  const { entries: history, upsert: upsertHistory, remove: removeHistory, clear: clearHistory, hydrated: historyHydrated } = useHistory()
+  const restoredRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
 
@@ -87,6 +89,38 @@ export default function Home() {
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
   }, [messages.length, loading])
+
+  // Restore the most recent active thread once history has hydrated from
+  // localStorage. Runs at most once per page load.
+  useEffect(() => {
+    if (!historyHydrated || restoredRef.current) return
+    restoredRef.current = true
+    try {
+      const storedId = localStorage.getItem('handydad-current-thread')
+      if (!storedId) return
+      const found = history.find(h => h.id === storedId)
+      if (found) {
+        setMessages(found.messages)
+        setCurrentThreadId(storedId)
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [historyHydrated, history])
+
+  // Persist the current thread id so refresh restores the active conversation.
+  useEffect(() => {
+    if (!historyHydrated) return
+    try {
+      if (currentThreadId) {
+        localStorage.setItem('handydad-current-thread', currentThreadId)
+      } else {
+        localStorage.removeItem('handydad-current-thread')
+      }
+    } catch {
+      // ignore
+    }
+  }, [currentThreadId, historyHydrated])
 
   if (authLoading) {
     return (
@@ -132,6 +166,15 @@ export default function Home() {
     // the response still writes to the project that owned this exchange.
     const capturedProjectId = activeProject?.id ?? null
 
+    // Capture the thread id too — both the pre-call and post-call upserts must
+    // use the same id so a half-completed exchange becomes the same history
+    // entry that the assistant reply will later complete.
+    let capturedThreadId = currentThreadId
+    if (!capturedProjectId && !capturedThreadId) {
+      capturedThreadId = newId()
+      setCurrentThreadId(capturedThreadId)
+    }
+
     // Drop any trailing error message so it doesn't pollute the next exchange.
     const baseMessages = messages.filter(m => m.role !== 'error')
     const nextMessages = [...baseMessages, userMsg]
@@ -140,6 +183,9 @@ export default function Home() {
     setLoading(true)
 
     if (capturedProjectId) persistProjectMessage(capturedProjectId, 'user', userMsg.content)
+    // Save the user's question immediately so a crash/refresh before the
+    // assistant replies still preserves what they asked.
+    if (capturedThreadId) upsertHistory(capturedThreadId, nextMessages)
 
     const wire: ApiMessage[] = nextMessages
       .filter(m => m.role === 'user' || m.role === 'assistant')
@@ -162,33 +208,37 @@ export default function Home() {
         estimate,
         ts: Date.now(),
       }
-      setMessages(prev => [...prev, assistantMsg])
+      const finalMessages = [...nextMessages, assistantMsg]
+      setMessages(finalMessages)
       if (capturedProjectId && text) persistProjectMessage(capturedProjectId, 'assistant', text)
+      if (capturedThreadId) upsertHistory(capturedThreadId, finalMessages)
     } catch (err: any) {
       const reason = !navigator.onLine
         ? 'No internet connection. Please check your network and try again.'
         : err?.message || 'Something went wrong. Please try again.'
-      setMessages(prev => [
-        ...prev,
-        { id: newId(), role: 'error', content: reason, ts: Date.now() },
-      ])
+      setMessages(prev => {
+        const next: ChatMessage[] = [
+          ...prev,
+          { id: newId(), role: 'error', content: reason, ts: Date.now() },
+        ]
+        if (capturedThreadId) upsertHistory(capturedThreadId, next)
+        return next
+      })
     } finally {
       setLoading(false)
     }
   }
 
   const handleSelectHistory = (entry: HistoryThread) => {
-    // Save current thread (if any) before swapping in the selected one.
-    if (messages.length && !activeProject) addHistory(messages)
     setActiveProject(null)
     setMessages(entry.messages)
+    setCurrentThreadId(entry.id)
     setInput('')
   }
 
   const handleSelectProject = async (project: Project | null) => {
-    // Stash current local thread to history if we were in free-chat mode.
-    if (!activeProject && messages.length) addHistory(messages)
     setInput('')
+    setCurrentThreadId(null)
     if (!project) {
       setActiveProject(null)
       setMessages([])
@@ -220,8 +270,8 @@ export default function Home() {
   }
 
   const handleClear = () => {
-    if (messages.length && !activeProject) addHistory(messages)
     setMessages([])
+    setCurrentThreadId(null)
     setInput('')
   }
 
@@ -366,9 +416,9 @@ export default function Home() {
                         className="bookmark-btn"
                         onClick={() => openGuideModal(msg)}
                         aria-label="Save as guide"
-                        title="Save as guide"
+                        title="Save this answer to your guides library"
                       >
-                        🔖
+                        <span aria-hidden="true">🔖</span> Save guide
                       </button>
                     </div>
                   </div>

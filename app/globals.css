@@ -1061,25 +1061,27 @@ strong { color: var(--accent-hover); font-weight: 600; }
 }
 
 .bookmark-btn {
-  background: transparent;
-  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0.2rem 0.45rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 6px;
-  font-size: 0.95rem;
-  opacity: 0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
   transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
 }
-.msg-assistant:hover .bookmark-btn,
+.bookmark-btn:hover,
 .bookmark-btn:focus {
-  opacity: 0.85;
-}
-.bookmark-btn:hover {
-  opacity: 1 !important;
+  opacity: 1;
   color: var(--accent);
-  border-color: var(--border);
-  background: var(--surface);
+  border-color: var(--accent);
 }
 
 .saved-flash {
@@ -1616,5 +1618,4 @@ strong { color: var(--accent-hover); font-weight: 600; }
   .msg-user { max-width: 88%; }
   .estimate-strip { grid-template-columns: repeat(2, 1fr); }
   .chat-thread { padding: 1rem; max-height: 60vh; }
-  .bookmark-btn { opacity: 0.7; }
 }
