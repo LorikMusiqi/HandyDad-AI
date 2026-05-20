@@ -1,5 +1,5 @@
 # HandyDad AI
-
+🔧 Live Demo: [ https://handy-dad-ai-lorikmusiqis-projects.vercel.app](https://handy-dad-ai-lorikmusiqis-projects.vercel.app)
 Your expert guide for home repairs. Type a question like _"How do I fix a leaky faucet?"_ and HandyDad — a calm, safety-first virtual handyman with 40+ years of experience — walks you through the job step by step.
 
 Built with Next.js 14 (App Router), Supabase Auth, and the Groq API.
