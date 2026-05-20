@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from './context/AuthContext'
 import { ThemePicker } from './components/ThemePicker'
-import { HistoryDrawer, useHistory, HistoryEntry } from './components/HistoryDrawer'
+import { HistoryDrawer, useHistory } from './components/HistoryDrawer'
+import { EstimateBadge } from './components/EstimateBadge'
+import { EscalationCard } from './components/EscalationCard'
+import { SaveGuideModal } from './components/SaveGuideModal'
+import { ProjectPanel } from './components/ProjectPanel'
+import { supabase } from '../lib/supabase'
+import type { ChatMessage, ApiMessage, HistoryThread, EstimateMeta, Project, ProjectMessage } from './lib/types'
 
 const TIP_QUESTIONS = [
   'Replace a light switch',
@@ -14,6 +20,12 @@ const TIP_QUESTIONS = [
 ]
 
 const MAX_CHARS = 1000
+
+function newId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now() + Math.random())
+}
 
 function renderInline(text: string): React.ReactNode {
   return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
@@ -43,20 +55,38 @@ function ResponseBlock({ text }: { text: string }) {
   )
 }
 
+function firstNonEmptyLine(text: string, max = 60): string {
+  for (const line of text.split('\n')) {
+    const t = line.replace(/^[#>\-*\s]+/, '').trim()
+    if (t) return t.length > max ? t.slice(0, max - 1) + '…' : t
+  }
+  return 'Saved guide'
+}
+
 export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth()
   const router = useRouter()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [response, setResponse] = useState('')
-  const [error, setError] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [projectsOpen, setProjectsOpen] = useState(false)
+  const [activeProject, setActiveProject] = useState<Project | null>(null)
+  const [savedFlash, setSavedFlash] = useState<Record<string, boolean>>({})
+  const [guideModal, setGuideModal] = useState<{ open: boolean; messageId: string; content: string }>(
+    { open: false, messageId: '', content: '' },
+  )
   const { entries: history, add: addHistory, remove: removeHistory, clear: clearHistory } = useHistory()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const threadEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/landing')
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
+  }, [messages.length, loading])
 
   if (authLoading) {
     return (
@@ -71,60 +101,152 @@ export default function Home() {
 
   if (!user) return null
 
+  const lastError = messages.length && messages[messages.length - 1].role === 'error'
+    ? messages[messages.length - 1]
+    : null
+
+  const persistProjectMessage = (projectId: string, role: 'user' | 'assistant', content: string) => {
+    // Fire-and-forget. We never block UI on Supabase writes.
+    supabase
+      .from('project_messages')
+      .insert({ project_id: projectId, role, content })
+      .then(({ error: insertError }) => {
+        if (insertError) console.error('project_messages insert failed', insertError)
+      })
+  }
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
-
-    // Edge case 1: Empty input
-    if (!input.trim()) {
-      setError('Please describe your repair or task before asking.')
-      return
-    }
-
-    // Edge case 2: Input too long
-    if (input.trim().length > MAX_CHARS) {
-      setError(`Your question is too long. Please keep it under ${MAX_CHARS} characters.`)
-      return
-    }
-
-    // Edge case 3: Double submit prevention
+    if (!input.trim()) return
+    if (input.trim().length > MAX_CHARS) return
     if (loading) return
 
-    const askedQuestion = input.trim()
-    setResponse('')
-    setError('')
+    const userMsg: ChatMessage = {
+      id: newId(),
+      role: 'user',
+      content: input.trim(),
+      ts: Date.now(),
+    }
+
+    // Capture the project id at submit time. If the user switches projects mid-stream,
+    // the response still writes to the project that owned this exchange.
+    const capturedProjectId = activeProject?.id ?? null
+
+    // Drop any trailing error message so it doesn't pollute the next exchange.
+    const baseMessages = messages.filter(m => m.role !== 'error')
+    const nextMessages = [...baseMessages, userMsg]
+    setMessages(nextMessages)
+    setInput('')
     setLoading(true)
+
+    if (capturedProjectId) persistProjectMessage(capturedProjectId, 'user', userMsg.content)
+
+    const wire: ApiMessage[] = nextMessages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: askedQuestion }),
+        body: JSON.stringify({ messages: wire }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || res.statusText)
-      const text = data.text ?? ''
-      setResponse(text)
-      if (text) addHistory({ question: askedQuestion, response: text })
-    } catch (err: any) {
-      // Edge case 4: Network error vs API error
-      if (!navigator.onLine) {
-        setError('No internet connection. Please check your network and try again.')
-      } else {
-        setError(err.message || 'Something went wrong. Please try again.')
+      const text: string = data.text ?? ''
+      const estimate: EstimateMeta | null = data.estimate ?? null
+      const assistantMsg: ChatMessage = {
+        id: newId(),
+        role: 'assistant',
+        content: text,
+        estimate,
+        ts: Date.now(),
       }
+      setMessages(prev => [...prev, assistantMsg])
+      if (capturedProjectId && text) persistProjectMessage(capturedProjectId, 'assistant', text)
+    } catch (err: any) {
+      const reason = !navigator.onLine
+        ? 'No internet connection. Please check your network and try again.'
+        : err?.message || 'Something went wrong. Please try again.'
+      setMessages(prev => [
+        ...prev,
+        { id: newId(), role: 'error', content: reason, ts: Date.now() },
+      ])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSelectHistory = (entry: HistoryEntry) => {
-    setInput(entry.question)
-    setResponse(entry.response)
-    setError('')
+  const handleSelectHistory = (entry: HistoryThread) => {
+    // Save current thread (if any) before swapping in the selected one.
+    if (messages.length && !activeProject) addHistory(messages)
+    setActiveProject(null)
+    setMessages(entry.messages)
+    setInput('')
+  }
+
+  const handleSelectProject = async (project: Project | null) => {
+    // Stash current local thread to history if we were in free-chat mode.
+    if (!activeProject && messages.length) addHistory(messages)
+    setInput('')
+    if (!project) {
+      setActiveProject(null)
+      setMessages([])
+      return
+    }
+    setActiveProject(project)
+    setMessages([])
+    setLoading(true)
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('project_messages')
+        .select('*')
+        .eq('project_id', project.id)
+        .order('created_at', { ascending: true })
+      if (fetchError) throw fetchError
+      const loaded: ChatMessage[] = ((data ?? []) as ProjectMessage[]).map(row => ({
+        id: row.id,
+        role: row.role,
+        content: row.content,
+        ts: new Date(row.created_at).getTime(),
+      }))
+      setMessages(loaded)
+    } catch (err: any) {
+      console.error('project_messages fetch failed', err)
+      setMessages([{ id: newId(), role: 'error', content: err?.message || 'Could not load project messages.', ts: Date.now() }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleClear = () => {
+    if (messages.length && !activeProject) addHistory(messages)
+    setMessages([])
+    setInput('')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+  }
+
+  const dismissError = () => {
+    setMessages(prev => prev.filter(m => m.role !== 'error'))
+  }
+
+  const openGuideModal = (msg: ChatMessage) => {
+    setGuideModal({ open: true, messageId: msg.id, content: msg.content })
+  }
+
+  const handleGuideSaved = () => {
+    const id = guideModal.messageId
+    setSavedFlash(prev => ({ ...prev, [id]: true }))
+    window.setTimeout(() => {
+      setSavedFlash(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+    }, 2000)
   }
 
   const charColor = input.length > MAX_CHARS
@@ -144,15 +266,32 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="header-actions">
+          <button
+            className="btn-ghost"
+            onClick={() => setProjectsOpen(true)}
+            aria-label="Open projects"
+          >
+            <span aria-hidden="true">□</span>
+            Projects
+            {activeProject && <span className="btn-badge">●</span>}
+          </button>
           <button
             className="btn-ghost"
             onClick={() => setHistoryOpen(true)}
-            aria-label="Open question history"
+            aria-label="Open conversation history"
           >
             <span aria-hidden="true">≡</span>
             History
             {history.length > 0 && <span className="btn-badge">{history.length}</span>}
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => router.push('/guides')}
+            aria-label="Open saved guides"
+          >
+            <span aria-hidden="true">⌘</span>
+            Guides
           </button>
           <ThemePicker />
           <button className="btn-ghost" onClick={signOut}>Logout</button>
@@ -168,6 +307,22 @@ export default function Home() {
         onClear={clearHistory}
       />
 
+      <ProjectPanel
+        open={projectsOpen}
+        onClose={() => setProjectsOpen(false)}
+        activeProject={activeProject}
+        onSelect={handleSelectProject}
+        onProjectUpdate={(p) => setActiveProject(p)}
+      />
+
+      <SaveGuideModal
+        open={guideModal.open}
+        onClose={() => setGuideModal({ open: false, messageId: '', content: '' })}
+        defaultTitle={firstNonEmptyLine(guideModal.content)}
+        content={guideModal.content}
+        onSaved={handleGuideSaved}
+      />
+
       <div className="card">
         <div className="card-header">
           <span className="card-section">§ 01 / Workshop</span>
@@ -179,8 +334,66 @@ export default function Home() {
 
         {loading && <div className="loading-bar"><div className="loading-bar-inner" /></div>}
 
+        {activeProject && (
+          <div className="active-project-banner">
+            <span>Project</span>
+            <strong>{activeProject.name}</strong>
+            <span className={`status-badge status-${activeProject.status}`} style={{ marginLeft: 'auto' }}>
+              {activeProject.status}
+            </span>
+          </div>
+        )}
+
+        {messages.length > 0 && (
+          <div className="chat-thread">
+            {messages.map(msg => {
+              if (msg.role === 'error') return null
+              if (msg.role === 'user') {
+                return (
+                  <div key={msg.id} className="msg-bubble msg-user">
+                    <div className="msg-content">{msg.content}</div>
+                  </div>
+                )
+              }
+              const est = msg.estimate
+              return (
+                <div key={msg.id} className="msg-bubble msg-assistant">
+                  <div className="msg-toolbar">
+                    <div className="response-badge">HandyDad's Answer</div>
+                    <div className="msg-toolbar-actions">
+                      {savedFlash[msg.id] && <span className="saved-flash">Saved ✓</span>}
+                      <button
+                        className="bookmark-btn"
+                        onClick={() => openGuideModal(msg)}
+                        aria-label="Save as guide"
+                        title="Save as guide"
+                      >
+                        🔖
+                      </button>
+                    </div>
+                  </div>
+                  {est?.escalate && <EscalationCard reason={est.escalate_reason} />}
+                  {est && <EstimateBadge estimate={est} />}
+                  <ResponseBlock text={msg.content} />
+                </div>
+              )
+            })}
+            {loading && (
+              <div className="msg-bubble msg-assistant msg-loading">
+                <div className="loading-state inline">
+                  <div className="spinner" />
+                  Consulting 40 years of experience…
+                </div>
+              </div>
+            )}
+            <div ref={threadEndRef} />
+          </div>
+        )}
+
         <div className="input-section">
-          <label className="input-label" htmlFor="question">Describe your repair or task</label>
+          <label className="input-label" htmlFor="question">
+            {messages.length ? 'Ask a follow-up' : 'Describe your repair or task'}
+          </label>
           <div className="textarea-wrap">
             <textarea
               id="question"
@@ -189,7 +402,9 @@ export default function Home() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={5}
-              placeholder="e.g. How do I fix a leaky faucet? My toilet keeps running. How to patch drywall…"
+              placeholder={messages.length
+                ? "e.g. What tools do I need for step 3?"
+                : "e.g. How do I fix a leaky faucet? My toilet keeps running. How to patch drywall…"}
             />
             <span className="kbd-hint">⌘↵ to send</span>
           </div>
@@ -201,10 +416,10 @@ export default function Home() {
             >
               {loading
                 ? <><span className="spinner spinner-sm" /> Working on it…</>
-                : <>🔨 Ask HandyDad</>}
+                : <>🔨 {messages.length ? 'Send' : 'Ask HandyDad'}</>}
             </button>
-            <button className="btn-ghost" onClick={() => { setInput(''); setResponse(''); setError('') }}>
-              ✕ Clear
+            <button className="btn-ghost" onClick={handleClear}>
+              ✕ {messages.length ? 'New chat' : 'Clear'}
             </button>
             <span className="char-count" style={{ color: charColor }}>
               {input.length}/{MAX_CHARS}
@@ -212,24 +427,10 @@ export default function Home() {
           </div>
         </div>
 
-        {loading && (
-          <div className="loading-state">
-            <div className="spinner" />
-            Consulting 40 years of experience…
-          </div>
-        )}
-
-        {response && !loading && (
-          <div className="response-section">
-            <div className="response-badge">HandyDad's Answer</div>
-            <ResponseBlock text={response} />
-          </div>
-        )}
-
-        {error && (
+        {lastError && (
           <div className="error-section">
-            <div className="error-msg"><span>⚠</span><span>{error}</span></div>
-            <button className="btn-dismiss" onClick={() => setError('')}>Dismiss</button>
+            <div className="error-msg"><span>⚠</span><span>{lastError.content}</span></div>
+            <button className="btn-dismiss" onClick={dismissError}>Dismiss</button>
           </div>
         )}
       </div>

@@ -12,6 +12,7 @@ export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setInfo('')
 
     if (!name.trim()) {
       setError('Please enter your name')
@@ -35,8 +37,12 @@ export default function Signup() {
 
     setLoading(true)
     try {
-      await signUp(email, password, name)
-      router.push('/')
+      const session = await signUp(email, password, name)
+      if (session) {
+        router.replace('/')
+      } else {
+        setInfo('Account created. Check your email to confirm before signing in.')
+      }
     } catch (err: any) {
       setError(err.message || 'Signup failed')
     } finally {
@@ -114,6 +120,14 @@ export default function Signup() {
             <div className="error-section">
               <div className="error-msg"><span>⚠</span><span>{error}</span></div>
               <button type="button" className="btn-dismiss" onClick={() => setError('')}>Dismiss</button>
+            </div>
+          )}
+
+          {info && (
+            <div className="error-section" style={{ borderColor: 'var(--accent)' }}>
+              <div className="error-msg" style={{ color: 'var(--accent)' }}>
+                <span>✉</span><span>{info}</span>
+              </div>
             </div>
           )}
 
